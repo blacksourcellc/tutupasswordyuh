@@ -1,70 +1,39 @@
-name: Update keys
+name: Update Password Branch
 
 on:
-  workflow_dispatch: null
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch:
 
 jobs:
-  update:
-    name: Update keys
-    permissions:
-      contents: write
-
+  update-password:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Clone repo
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup NodeJS environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: 14
-          cache: npm
-
-      - name: Install dependencies
-        run: npm install axios
-
-      - name: Get keys
-        run: |
-          npm run getkeys
-
-      - name: Checkout keys branch
-        uses: actions/checkout@v4
-        with:
-          ref: keys
-          path: key_repo
-
-      - name: Update key if it differs
-        run: |
-          file=password.txt
-          cd key_repo
-          echo "Old -> $(cat $file) || New -> $(cat ../$file)"
-          if [[ "$(cat $file)" != "$(cat ../$file)" ]]; then
-            cp ../$file .
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git add $file
-            git commit --amend -m "chore: Updating key"
-            git push --force
-          fi
-
-  # Workaround for CI schedule event, to prevent its delays (5min ~ 1h!)
-  retrigger:
-    name: Retrigger workflow
-    runs-on: ubuntu-latest
-    if: '${{ always() }}'
-    needs:
-      - update
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@v3
-        with:
-          ref: main
-      - name: Retrigger workflow
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Update keys
-          token: '${{ secrets.PAT_GITHUB }}'
-          retain_days: 0
-          keep_minimum_runs: 10
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        ref: keys
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+      
+    - name: Install dependencies
+      run: npm install axios
+      
+    - name: Fetch new password
+      id: fetch_new_password
+      run: |
+        password=$(node indexs.js)
+        echo "${password}" > password.txt
+      
+    - name: Commit and push changes to Password branch
+      run: |
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git add password.txt
+        git commit -m "Update password"
+        git push --force origin keys
+      
