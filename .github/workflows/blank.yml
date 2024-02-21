@@ -1,0 +1,51 @@
+name: Update Password Branch
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+
+jobs:
+  update-password:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+      
+    - name: Install dependencies
+      run: npm install axios
+      
+    - name: Retrieve existing password
+      id: get_existing_password
+      run: echo "::set-output name=password::$(git show password:password.txt)"
+      
+    - name: Fetch new password
+      id: fetch_new_password
+      run: |
+        password=$(node indexs.js)
+        echo "::set-output name=password::${password}"
+      
+    - name: Compare passwords
+      id: compare_passwords
+      run: |
+        if [ "${{ steps.get_existing_password.outputs.password }}" == "${{ steps.fetch_new_password.outputs.password }}" ]; then
+          echo "Passwords are the same. Skipping update."
+          exit 1
+        else
+          echo "Passwords are different. Proceeding with the update."
+        fi
+      
+    - name: Update Password Branch
+      if: ${{ success() }}
+      run: |
+        git checkout -b password
+        git add password.txt
+        git commit -m "Update password"
+        git push origin password
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
