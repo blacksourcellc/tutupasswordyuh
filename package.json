@@ -1,0 +1,25 @@
+{
+  "name": "dkeys",
+  "version": "1.0.0",
+  "description": "",
+  "main": "indexs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "getkeys": "node indexs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blacksourcellc/cookiemuncher.git"
+  },
+  "author": "bytarch",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/blacksourcellc/cookiemuncher/issues"
+  },
+  "homepage": "https://github.com/blacksourcellc/cookiemuncher#readme",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "node-fetch": "^3.3.2",
+    "restringer": "^1.10.2"
+  }
+}
