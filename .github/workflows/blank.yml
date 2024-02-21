@@ -36,4 +36,5 @@ jobs:
         git add password.txt
         git commit -m "Update password"
         git push --force origin keys
-      
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
