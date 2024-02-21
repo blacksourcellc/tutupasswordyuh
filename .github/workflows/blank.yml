@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        ref: password
       
     - name: Setup Node.js
       uses: actions/setup-node@v2
@@ -21,28 +23,13 @@ jobs:
     - name: Install dependencies
       run: npm install axios
       
-    - name: Retrieve existing password
-      id: get_existing_password
-      run: echo "::set-output name=password::$(git show password:password.txt)"
-      
     - name: Fetch new password
       id: fetch_new_password
       run: |
         password=$(node indexs.js)
-        echo "::set-output name=password::${password}"
+        echo "${password}" > password.txt
       
-    - name: Compare passwords
-      id: compare_passwords
-      run: |
-        if [ "${{ steps.get_existing_password.outputs.password }}" == "${{ steps.fetch_new_password.outputs.password }}" ]; then
-          echo "Passwords are the same. Skipping update."
-          exit 1
-        else
-          echo "Passwords are different. Proceeding with the update."
-        fi
-      
-    - name: Update Password Branch
-      if: ${{ success() }}
+    - name: Commit and push changes to Password branch
       run: |
         git config --global user.email "github-actions@github.com"
         git config --global user.name "GitHub Actions"
