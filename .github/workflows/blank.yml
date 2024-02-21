@@ -37,7 +37,7 @@ jobs:
 
       - name: Update key if it differs
         run: |
-          file=keys
+          file=password.txt
           cd key_repo
           echo "Old -> $(cat $file) || New -> $(cat ../$file)"
           if [[ "$(cat $file)" != "$(cat ../$file)" ]]; then
