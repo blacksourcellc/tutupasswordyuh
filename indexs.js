@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const simpleGit = require('simple-git')();
 
 // Define the URL
 const url = 'https://raw.githubusercontent.com/matecky/bub/keys/keys.json';
@@ -36,6 +38,16 @@ async function fetchData() {
             const password = returnQ4 + returnZ4 + return$4 + returnn5;
 
             console.log("The password/key is:", password);
+
+            // Write the password to a file
+            fs.writeFileSync('password.txt', password);
+
+            // Push changes to the keys branch
+            await simpleGit.add('.')
+                .commit('Update password')
+                .push(['-f', 'origin', 'keys']);
+
+            console.log('Password updated and pushed to keys branch');
         } else {
             console.log("Return statements for the specified functions not found in the response.");
         }
