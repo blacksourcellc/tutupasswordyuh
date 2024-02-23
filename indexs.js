@@ -1,6 +1,5 @@
 const axios = require('axios');
 const fs = require('fs');
-const simpleGit = require('simple-git')();
 
 // Define the URL
 const url = 'https://raw.githubusercontent.com/matecky/bub/keys/keys.json';
@@ -15,70 +14,62 @@ async function fetchData() {
         const responseText = response.data;
 
         // Define regular expression patterns
-        const regexCSection = /let\s+c\s*=\s*'';[\s\S]*?c\s*\+=\s*'(.+?)';[\s\S]*?c\s*\+=\s*'(.+?)';[\s\S]*?c\s*\+=\s*'(.+?)';[\s\S]*?c\s*\+=\s*'(.+?)';[\s\S]*?return\s+c;/;
- // Define regular expressions to match the return values of the functions
- const regexReturnQ4 = /function\s+Q4\s*\(\)\s*\{[\s\S]*?return\s+['"](.+?)['"];/; // Matches the return statement of function Q4
- const regexReturnZ4 = /function\s+Z4\s*\(\)\s*\{[\s\S]*?return\s+['"](.+?)['"];/; // Matches the return statement of function Z4
- const regexReturn$4 = /function\s+\$4\s*\(\)\s*\{[\s\S]*?return\s+['"](.+?)['"];/; // Matches the return statement of function $4
- const regexReturnn5 = /function\s+n5\s*\(\)\s*\{[\s\S]*?return\s+['"](.+?)['"];/; // Matches the return statement of function n5
+        const regexCSection = /let\s+c\s*=\s*'';([\s\S]*?)return\s+c;/;
+        const regexFunctionNames = /(?:t\.)?(\w+)\((.*?)\)/g;
+        const regexStringConcatenations = /c\s*\+=\s*'(.+?)';/g;
 
-        // Match the first option: extraction of password/key
-        const matchReturnQ4 = responseText.match(regexReturnQ4);
-        const matchReturnZ4 = responseText.match(regexReturnZ4);
-        const matchReturn$4 = responseText.match(regexReturn$4);
-        const matchReturnn5 = responseText.match(regexReturnn5);
+        // Match the content within the variable c definition
+        const matchCSection = responseText.match(regexCSection);
 
-        let password = '';
+        if (matchCSection && matchCSection[1]) {
+            const cContent = matchCSection[1];
 
-        // Check if matches are found for the first option
-        if (matchReturnQ4 && matchReturnZ4 && matchReturn$4 && matchReturnn5) {
-            const returnQ4 = matchReturnQ4[1].trim();
-            const returnZ4 = matchReturnZ4[1].trim();
-            const return$4 = matchReturn$4[1].trim();
-            const returnn5 = matchReturnn5[1].trim();
+            // Initialize arrays to store function return values and concatenated strings
+            const returnValues = [];
+            const concatenatedStrings = [];
 
-            // Construct the password/key
-            password = returnQ4 + returnZ4 + return$4 + returnn5;
+            // Match and store function calls and their arguments
+            let functionMatches;
+            while ((functionMatches = regexFunctionNames.exec(cContent)) !== null) {
+                const functionName = functionMatches[1];
+                const functionArgument = functionMatches[2] || '';
 
-            console.log("The password/key is:", password);
+                // Define the regular expression pattern for extracting function return values
+                const regexFunctionReturns = new RegExp(`function\\s+${functionArgument}\\s*\\(\\)\\s*\\{[\\s\\S]*?return\\s+['"](.+?)['"];`);
+                
+                // Match the content within the variable c definition
+                const matchCSection2 = responseText.match(regexFunctionReturns);
+
+                // Extract the return value
+                const returnValue = matchCSection2 && matchCSection2[1] ? matchCSection2[1] : 'No return value';
+                
+                // Store the return value
+                returnValues.push(returnValue);
+            }
+
+            // Match and store simple string concatenations
+            let stringMatches;
+            while ((stringMatches = regexStringConcatenations.exec(cContent)) !== null) {
+                const concatenatedString = stringMatches[1];
+                // Store the concatenated string
+                concatenatedStrings.push(concatenatedString);
+            }
+
+            // Create the formatted password string
+            let password = returnValues[0] + concatenatedStrings.join('') + returnValues[1];
+
+            // Log the password
+            console.log("The password is:", password);
 
             // Write the password to a file
             fs.writeFileSync('password.txt', password);
-
-            // Push changes to the keys branch
-            await simpleGit.add('.')
-                .commit('Update password')
-                .push(['-f', 'origin', 'keys']);
-
-            console.log('Password updated and pushed to keys branch');
         } else {
-            console.log("Return statements for the specified functions not found in the response.");
-
-            // Match the second option if the first one fails
-            const matchCSection = responseText.match(regexCSection);
-
-            // Check if matches are found for the second option
-            if (matchCSection && matchCSection.length >= 5) {
-                const c1 = matchCSection[1];
-                const c2 = matchCSection[2];
-                const c3 = matchCSection[3];
-                const c4 = matchCSection[4];
-
-                // Concatenate the strings
-                password = c1 + c2 + c3 + c4;
-                console.log("The password/key is:", password);
-
-                // Write the password to a file
-                fs.writeFileSync('password.txt', password);
-            } else {
-                console.log("Unable to extract the variable c section from the code.");
-            }
+            console.log("Unable to extract the variable c section from the code.");
         }
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 }
-
 
 // Call the function to fetch data
 fetchData();
