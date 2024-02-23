@@ -1,41 +1,57 @@
 const axios = require('axios');
 const fs = require('fs');
-
 // Define the URL
 const url = 'https://raw.githubusercontent.com/matecky/bub/keys/keys.json';
 
-// Function to fetch the data from the URL
 async function fetchData() {
     try {
-        // Fetch data from the URL
         const response = await axios.get(url);
-
-        // Extract the response text
         const responseText = response.data;
 
-        // Define regular expression patterns
-        const regexCSection = /let\s+c\s*=\s*'';([\s\S]*?)return\s+c;/;
-        const regexFunctionNames = /(?:t\.)?(\w+)\((.*?)\)/g;
-        const regexStringConcatenations = /c\s*\+=\s*'(.+?)';/g;
-
-        // Match the content within the variable c definition
+        // Define the regex to extract the structure of the c section
+        const regexCSection = /(?:let|const)\s+c\s*=\s*(?:''|")(.+?)(?:''|");|let\s+c\s*=\s*'';([\s\S]*?)return\s+c;/;
         const matchCSection = responseText.match(regexCSection);
 
-        if (matchCSection && matchCSection[1]) {
-            const cContent = matchCSection[1];
+        if (matchCSection && (matchCSection[1] || matchCSection[2])) {
+            const cContent = matchCSection[1] || matchCSection[2];
+            console.log("CSECTION: ", JSON.stringify(cContent));
 
-            // Initialize arrays to store function return values and concatenated strings
-            const returnValues = [];
-            const concatenatedStrings = [];
+            const data = {
+                functionData: [],
+                concatenatedStrings: [],
+                finalPassword: ''
+            };
 
-            // Match and store function calls and their arguments
-            let functionMatches;
-            while ((functionMatches = regexFunctionNames.exec(cContent)) !== null) {
-                const functionName = functionMatches[1];
-                const functionArgument = functionMatches[2] || '';
+   // Define regex patterns for string extraction and function argument extraction
+const regexString = /'(.*?)'/g;
+const regexFunctionArgument = /(?:t\.)?\w+\((.*?)\)/g;
+// Determine the number of steps needed based on the length of cContent
+const numSteps = 4;
+// Define an array to store extracted items
+const extractedItems = [];
 
+// Iterate through each step
+for (let i = 0; i < numSteps; i++) {
+    // Extract the current step content
+    const currentStepContent = cContent.split(';')[i];
+
+    // Check if the current step content is a string
+    if (currentStepContent.includes("'")) {
+        // Extract the string
+        const regexStringMatch = regexString.exec(currentStepContent);
+        if (regexStringMatch) {
+            extractedItems.push(regexStringMatch[1]);
+            console.log(`Step ${i + 1} - Extracted String: ${regexStringMatch[1]}`);
+        } else {
+            console.log(`Step ${i + 1} - No string found.`);
+        }
+    } else {
+        // Extract function argument
+        let match;
+        while ((match = regexFunctionArgument.exec(currentStepContent)) !== null) {
+            
                 // Define the regular expression pattern for extracting function return values
-                const regexFunctionReturns = new RegExp(`function\\s+${functionArgument}\\s*\\(\\)\\s*\\{[\\s\\S]*?return\\s+['"](.+?)['"];`);
+                const regexFunctionReturns = new RegExp(`function\\s+${match[1]}\\s*\\(\\)\\s*\\{[\\s\\S]*?return\\s+['"](.+?)['"];`);
                 
                 // Match the content within the variable c definition
                 const matchCSection2 = responseText.match(regexFunctionReturns);
@@ -43,26 +59,20 @@ async function fetchData() {
                 // Extract the return value
                 const returnValue = matchCSection2 && matchCSection2[1] ? matchCSection2[1] : 'No return value';
                 
-                // Store the return value
-                returnValues.push(returnValue);
-            }
+            extractedItems.push(returnValue);
+            console.log(`Step ${i + 1} - Extracted Function Argument: ${match[1]}`);
+        }
+       
+    }
+}
 
-            // Match and store simple string concatenations
-            let stringMatches;
-            while ((stringMatches = regexStringConcatenations.exec(cContent)) !== null) {
-                const concatenatedString = stringMatches[1];
-                // Store the concatenated string
-                concatenatedStrings.push(concatenatedString);
-            }
 
-            // Create the formatted password string
-            let password = returnValues[0] + concatenatedStrings.join('') + returnValues[1];
+// Output the extracted items as a string
+console.log("Extracted Items:", extractedItems.join(''));
 
-            // Log the password
-            console.log("The password is:", password);
 
-            // Write the password to a file
-            fs.writeFileSync('password.txt', password);
+            // console.log("Final Password:", data.finalPassword);
+             fs.writeFileSync('password.txt', extractedItems.join(''));
         } else {
             console.log("Unable to extract the variable c section from the code.");
         }
@@ -71,5 +81,4 @@ async function fetchData() {
     }
 }
 
-// Call the function to fetch data
 fetchData();
