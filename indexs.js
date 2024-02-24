@@ -37,14 +37,16 @@ for (let i = 0; i < numSteps; i++) {
 
     // Check if the current step content is a string
     if (currentStepContent.includes("'")) {
-        // Extract the string
-        const regexStringMatch = regexString.exec(currentStepContent);
-        if (regexStringMatch) {
-            extractedItems.push(regexStringMatch[1]);
-            console.log(`Step ${i + 1} - Extracted String: ${regexStringMatch[1]}`);
+        const regexStringMatches = currentStepContent.match(regexString);
+        if (regexStringMatches) {
+            regexStringMatches.forEach(match => {
+                extractedItems.push(match.substring(1, match.length - 1)); // Remove the quotes
+                console.log(`Step ${i + 1} - Extracted String: ${match.substring(1, match.length - 1)}`);
+            });
         } else {
             console.log(`Step ${i + 1} - No string found.`);
         }
+        
     } else {
         // Extract function argument
         let match;
@@ -71,6 +73,8 @@ for (let i = 0; i < numSteps; i++) {
 console.log("Extracted Items:", extractedItems.join(''));
 
 
+            // Further processing or output as needed
+            // data.finalPassword = data.concatenatedStrings.join('');
             // console.log("Final Password:", data.finalPassword);
              fs.writeFileSync('password.txt', extractedItems.join(''));
         } else {
