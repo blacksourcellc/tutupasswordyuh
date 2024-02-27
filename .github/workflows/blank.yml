@@ -1,0 +1,70 @@
+name: Update keys
+
+on:
+  workflow_dispatch: null
+
+jobs:
+  update:
+    name: Update keys
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup NodeJS environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 14
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install axios
+
+      - name: Get keys
+        run: |
+          npm run getkeys
+
+      - name: Checkout keys branch
+        uses: actions/checkout@v4
+        with:
+          ref: keys
+          path: key_repo
+
+      - name: Update key if it differs
+        run: |
+          file=keys
+          cd key_repo
+          echo "Old -> $(cat $file) || New -> $(cat ../$file)"
+          if [[ "$(cat $file)" != "$(cat ../$file)" ]]; then
+            cp ../$file .
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add $file
+            git commit --amend -m "chore: Updating key"
+            git push --force
+          fi
+
+  # Workaround for CI schedule event, to prevent its delays (5min ~ 1h!)
+  retrigger:
+    name: Retrigger workflow
+    runs-on: ubuntu-latest
+    if: '${{ always() }}'
+    needs:
+      - update
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v3
+        with:
+          ref: main
+      - name: Retrigger workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Update keys
+          token: '${{ secrets.PAT_GITHUB }}'
+          retain_days: 0
+          keep_minimum_runs: 10
